@@ -1,0 +1,403 @@
+---
+title: "Bayesian Learning Assignment A"
+format: pdf
+editor: visual
+author: "Thomas Mortensen, Julia Langenius, Alex Holmskär"
+date: "2025-09-17"
+---
+
+# Problem 1
+
+## 1a)
+
+Due to the conjugate prior our posterior will also be beta distributed and we know
+the values for its parameters and expressions for mean and variance.
+$$
+\alpha_{posterior} = \alpha_0 + s = 2 + 14 = 16
+$$
+$$
+\beta_{posterior} = \beta_0 + f = 2 + 6 = 8
+$$
+
+$$
+E(\theta|y) = \dfrac{\alpha_{posterior}}{\alpha_{posterior} + \beta_{posterior}} = \dfrac{16}{16+8} = \dfrac{16}{24} = \dfrac{2}{3}
+$$
+$$
+\sqrt{V(\theta|y)} = \sqrt{\dfrac{\alpha_{posterior}\beta_{posterior}}{(\alpha_{posterior} + \beta_{posterior} + 1)(\alpha_{posterior} + \beta_{posterior})^2}} = \sqrt{\dfrac{16\times8}{(25)(24)^2}} = \sqrt{\dfrac{128}{14400}} \approx 0.0942809
+$$
+Here we can see the LLN at work as the sample quantities based on the sample mean, converge to their population counterparts.
+
+```{r}
+
+set.seed(123)
+##| echo: false
+plot(sapply(1:1e3, function(l) mean(rbeta(l, 16, 8))), ylab = "Mean of posterior samples", xlab = "n for each sample", main = "Convergence of sample mean")
+
+abline(h = 2/3, col = "red")
+legend("topright", legend = "True value(2/3)", col = "red", lty = 1, lwd = 1)
+
+plot(sapply(1:1e3, function(l) sd(rbeta(l, 16, 8))), ylab = "Std of posterior samples", xlab = "n for each sample", main = "Convergence of sample std")
+abline(h = 0.0942809, col = "red")
+legend("topright", legend = "True value(0.0942809)", col = "red", lty = 1, lwd = 1)
+
+
+```
+
+
+## 1b)
+
+```{r}
+set.seed(101)
+ndraws = 1e4
+PosteriorMCsample = rbeta(ndraws,16,8)
+probEstimate = mean(PosteriorMCsample < 0.5)
+data.frame(pTrue = pbeta(0.5, 16,8), pEstimate = probEstimate, row.names = "Probabilities")
+
+```
+
+## 1c)
+
+```{r}
+logodds = function(prob){
+  return( log(prob / (1-prob)) )
+}
+logOddsPosteriorSim = logodds(rbeta(n = 1e5, 16, 8))
+
+hist(logOddsPosteriorSim, col = "#4483d5")
+```
+
+# Problem 2
+
+## 2a)
+
+```{r}
+
+load("ericsson.Rdata")
+
+x = (returns - mean(returns)) / sd(returns) # standardized returns
+
+
+hist(x, 30, freq = FALSE, xlab = "daily returns (standardized)", ylab = "density", col = "#4483d5") # didnt manage to get prettycols working
+
+```
+
+V = 7 seems visually to be the MLE of V. 
+
+```{r}
+binwidth = 0.1
+vGrid = seq(1,20, by = binwidth)
+vLogLik = sapply(vGrid, function(v) sum(log(dt(x, v))))
+plot(vLogLik, ylab = "Log-Likelihood", xlab = paste0("v(df)(binwidth=", binwidth,")"), main = "Log-Likelihood of V", type = "l", col = "#4483d5", lwd = 2)
+points(vLogLik, cex = 0.1)
+```
+
+## 2b)
+
+We can see that both graphically and numerically, v = 10 has a higher likelihood than v = 1.
+This makes sense as our MLE of 7 is closer to 10 and more of the density is around 10 than 1. 
+
+```{r}
+vLik = sapply(vGrid, function(v) prod((dt(x, v))))
+plot(vLik, ylab = "Likelihood", xlab = paste0("v(df)(binwidth=", binwidth,")"), main = "Likelihood of V", type = "l", col = "#4483d5" )
+points(61, vLik[61], col = "#23d600", pch = 19)
+legend("topright", col = c("#4483d5", "red", "#23d600"), legend = c("L(V)", "L(1), L(10)", "MLE"), lwd = 1, lty = 1)
+
+#plot(sapply(1:100, function(v) exp(sum(log(dt(x, v))))), ylab = "Log-Likelihood", xlab = "v(df)", main = "Log-Likelihood of V")
+#lines(sapply(1:100, function(v) exp(sum(log(dt(x, v))))))
+points(c(1/binwidth,10/binwidth),vLik[c(1/binwidth,10/binwidth)], col = "red", pch = 19)
+cat("L(1) and L(10) are:",vLik[c(1,10)],"MLE: 7")
+
+
+```
+
+
+## 2c)
+
+```{r}
+vLogPrior = dexp(vGrid, rate = 0.25, log = TRUE)
+
+vLogPosterior = vLogLik + vLogPrior
+
+plot(vLogPosterior, xlab = paste0("v(df)(binwidth=", binwidth,")"), ylab = "Log-Density", main = "Unnormalized Posterior P(v|X)", type = "l", col = "brown")
+#lines(vLogPosterior)
+```
+
+## 2d)
+
+```{r}
+
+vPosterior = exp(vLogPosterior)
+vPosteriorNorm = vPosterior / (sum(vPosterior)*binwidth)
+
+# logsumexp <- function(log_values) {
+#     m <- max(log_values)                # find max
+#     m + log(sum(exp(log_values - m)))   # its called the logsumexp trick for these types of problems
+# })
+# logZ = logsumexp(vLogPosterior + log(dv))
+# vPosteriorNorm = exp(vLogPosterior - logZ)
+
+
+plot(vPosteriorNorm, xlab = paste0("v(df)(binwidth=", binwidth,")"), ylab = "Density", type = "l", col = "brown")
+#lines(vPosteriorNorm)
+lines(exp(vLogPrior), col = "red")
+lines(vLik / sum(vLik*binwidth), col = "blue")
+legend("topright", legend = c("Prior","Likelihood(Normalized)","Posterior"), lty = 1, lwd = 1, col = c("red", "blue", "brown"))
+```
+
+## 2e)
+
+Here is our estimate of the posterior mean through numerical integration, basically using a sum to approximate the integral of $\int{P(V│X) \times V}$.
+
+
+```{r}
+sum(vPosteriorNorm * vGrid * binwidth) # Basically approximate the integral x*f(x) with a sum. Apparently we can do some 
+```
+# Problem 3
+
+You are the manager of a small fruit shop that sells a particular exclusive mango fruit. You buy each mango for \$10 and sell them for \$20. One reason for the large mark-up is that some of the mango may go unsold, and must then be used for mango smoothies which only brings in \$3 per mango, i.e. a loss of \$7 on each mango that goes unsold. Each week you must decide on how many mangoes to bring into the shop, and the demand is uncertain.
+
+## 3a)
+
+As this is a conjugate prior it can be shown that the posterior is also gamma distributed with the following parameters
+
+$$
+p(\lambda|x) \sim gamma(\alpha = \alpha_{prior}+\sum{x_i}, \beta = n + \beta_{prior})
+$$
+With a mean and variance formulas such as:
+
+$$
+E(\lambda|x) = \dfrac{\alpha}{\beta}
+$$
+
+$$
+V(\lambda|x) = \dfrac{\alpha}{\beta^2}
+$$
+$$
+\alpha_{prior} = 7, \beta_{prior} = 2
+$$
+
+Here below we get an estimated probability of $\theta >8$ by the proportion of values above 8 drawn from the posterior. Sadly as the true probability is about one in 30k, we don't get even one value above 8 from 10k draws so our proportion is 0. 
+
+```{r}
+set.seed(123)
+xMangoes = c(3, 5, 4, 3, 6, 8, 6, 1, 14, 3)
+n = length(xMangoes)
+alpha_posterior = 7 + sum(xMangoes)
+beta_posterior = n + 2
+PosteriorPoisDraws = rgamma(n = 1e4, shape = alpha_posterior,rate = beta_posterior) # Shape = alpha, rate = beta, scale = theta = 1/beta
+
+hist(PosteriorPoisDraws, col = "#4483d5", breaks = 20)
+
+ProbEst = mean(PosteriorPoisDraws > 8)
+ProbTrue = pgamma(8, shape = alpha_posterior, rate = beta_posterior, lower.tail = FALSE)
+
+data.frame(Probtrue = ProbTrue, ProbEst = ProbEst, row.names = "Probabilities(gamma)")
+```
+
+## 3b)
+
+```{r}
+PredDistrDraws = rnbinom(n = 1e4, size = alpha_posterior, prob = beta_posterior / (beta_posterior + 1)) # r = size, theta = prob
+
+hist(PredDistrDraws, col = "#4483d5", breaks = 20)
+
+ProbDistrEst = mean(PredDistrDraws >= 8)
+ProbDistrTrue = pnbinom(7, size = alpha_posterior, prob = beta_posterior / (beta_posterior +1), lower.tail =  FALSE)
+data.frame(ProbTrue = ProbDistrTrue, ProbEst = ProbDistrEst, row.names = "Probabilities(Predictive distribution):")
+```
+## 3c)
+
+Maximizing Mango utility
+
+```{r}
+
+utilityFunc = function(x11, a11){
+  uVec = vector(length = length(x11))
+  j = 1
+  for(i in x11){
+    uVec[j] = 10*min(i, a11) -7*max(0,a11-i)
+    # print(uVec[j])
+    # print(j)
+    j = j + 1 
+  }
+  return((uVec))
+}
+
+a11Grid = 1:max(PredDistrDraws)
+
+
+UtilDraws = sapply(a11Grid, function(a11) mean(utilityFunc(PredDistrDraws, a11))) # A way of approximating the integral that is the expected posterior utility over a grid of a11 values.
+plot(UtilDraws, xlab = "a11(Mangoes to order)", ylab = "Utility", pch = 19, main = "Expected Utility Curve")
+lines(UtilDraws, col = "#4483d5")
+abline(v = 5, col = "red")
+cat("The argmax of our expected utility function is =", which.max(UtilDraws))
+```
+
+# Problem 4
+
+## 4a)
+
+```{r, warning=FALSE}
+#install.packages("remotes")                # Uncomment this the first time
+library(remotes)
+#install_github("StatisticsSU/SUdatasets")  # Uncomment this the first time
+library(SUdatasets)
+head(tempLinkoping)
+```
+
+```{r, warning=FALSE}
+library(mvtnorm)
+timeVar = as.matrix(tempLinkoping["time"])
+tempVar = as.matrix(tempLinkoping["temp"])
+xtime = t(cbind(rep(1, 6), timeVar, timeVar^2))
+# Simulator for the scaled inverse Chi-square distribution
+rScaledInvChi2 <- function(n, v_0, sigma2_0){
+  return((v_0*sigma2_0)/rchisq(n, df = v_0))
+}
+n = 1
+v_0 = 3
+sigma2_0 = 1
+nDrawsMVT = 200
+betaDraws = function(iter){
+sigma = rScaledInvChi2(n, v_0, sigma2_0)
+mu0 = c(-10,100,-100)
+omega0_inv = solve(0.01*diag(c(1,1,1)))
+beta = rmvnorm(n, mean = mu0 ,sigma = sigma * omega0_inv)    
+return(beta)
+}
+
+set.seed(123)
+
+betaVec = t(sapply(1:nDrawsMVT, betaDraws))
+
+predVec = betaVec %*% xtime  # A vector where each row is each datapoint(intercept, x, x^2) times one draw of beta coefs. So each value in the matrix is the predicted temp for one timepoint and one draw of beta coefs. 
+
+tGrid = seq(min(timeVar), max(timeVar), length.out = nrow(tempLinkoping))
+
+plot(tGrid, tempVar[,1], xlab = "Time", ylab = "Temp", main = "Prior draws of regression lines")
+matlines(tGrid, t(predVec), col = rgb(0,0,0,0.1))
+
+```
+
+These values for the prior and hyperprior's(hierarchical prior) hyperparameters seems a lot better with more regression lines following/fitting the data better and with less spread in distance and shape. 
+
+```{r}
+
+n = 1
+v_0 = 3
+sigma2_0 = 3
+nDrawsMVT = 200
+mu0 = c(-10,80,-70)
+omega0 = diag(c(4,4,4))
+omega0_inv = solve(omega0)
+betaDraws = function(iter){
+sigma = rScaledInvChi2(n, v_0, sigma2_0)
+beta = rmvnorm(n, mean = mu0 ,sigma = sigma * omega0_inv)    
+return(beta)
+}
+
+set.seed(123)
+
+betaVec = t(sapply(1:nDrawsMVT, betaDraws))
+
+predVec = betaVec %*% xtime  # A vector where each row is each datapoint(intercept, x, x^2) times one draw of beta coefs. So each value in the matrix is the predicted temp for one timepoint and one draw of beta coefs. 
+
+tGrid = seq(min(timeVar), max(timeVar), length.out = nrow(tempLinkoping))
+
+plot(tGrid, tempVar[,1], xlab = "Time", ylab = "Temp", main = "Prior draws of regression lines(new)")
+matlines(tGrid, t(predVec), col = rgb(0,0,0,0.1))
+
+```
+
+## 4b)
+
+```{r}
+
+# Page 86 Villani Book for reference. Basically we just sample from the posterior as its form and parameters are known due to conjugacy.
+
+MvnInvChisqPosteriorSampler = function(nDraws){
+n = nrow(tempVar)
+p = 3 # b0 + b1 + b2
+xtx = xtime %*% t(xtime)
+omega_n = xtx + omega0
+v_n = v_0 + n
+y = as.matrix(tempVar)
+betaHat = solve(xtime %*% t(xtime)) %*% xtime %*% y
+mu_n = solve(omega_n) %*% (xtx %*% betaHat + omega0 %*% mu0)
+s2 = t(y - t(xtime) %*% betaHat) %*% (y - t(xtime) %*% betaHat) / n-p
+
+v_nSigma2n =  v_0*sigma2_0 + (n-p)*s2 + t(mu_n - betaHat) %*% xtx %*% (mu_n - betaHat) + t(mu_n - mu0) %*% (omega0 %*% (mu_n - mu0))
+Sigma2n = v_nSigma2n / v_n
+
+myDraws = list()
+
+omega_n_inv = solve(omega_n)
+
+myDrawsMat = matrix(NA, nrow = nDraws, ncol = 4)
+
+for(i in 1:nDraws){
+sigma2 = rScaledInvChi2(n = 1, v_0 = v_n, sigma2_0 = Sigma2n)
+sigma2 = as.numeric(sigma2)
+beta = rmvnorm(1, mean = mu_n ,sigma = sigma2 * omega_n_inv)  
+myDrawsMat[i,] =  c(beta, sigma2)
+}
+myDraws = as.data.frame(myDrawsMat)
+colnames(myDraws) = c("B0", "B1", "B2", "Sigma2")
+return(myDraws)
+}
+
+set.seed(123)
+
+PosteriorDraws = MvnInvChisqPosteriorSampler(nDraws = 1e3)
+
+for(i in 1:4){
+  hist(PosteriorDraws[,i], main = paste("Histogram of Posteriordraws: ", colnames(PosteriorDraws)[i]), xlab = colnames(PosteriorDraws)[i], col = "#4483d5", breaks = 20)
+}
+
+medianBetaHat = sapply(1:3, function(j) median(PosteriorDraws[,j]))
+medianPreds = medianBetaHat %*% xtime
+```
+
+The interval bands do indeed not cover most of the points but this is due to them displaying the interval for the $\hat{\beta}$, having a 95% probability of containing the true $\hat{\beta}$, not a 95% probability of containing the data. 
+
+```{r}
+CredibleInterval = sapply(1:3, function(i) quantile(PosteriorDraws[,i], probs = c(0.025, 0.975))) %*% xtime # 2 x 366 result, each row is beta_2,5% * x or beta_97,5% * x
+plot(timeVar, tempVar, xlab = "time", ylab = "temperature", main = expression("95% Credible interval of" ~ hat(y)))
+lines(timeVar,as.numeric(medianPreds), col = "red")
+legend("bottomright", legend = c("upper(97.5%)", "BetaHat(Median posterior estimate)", "lower(2.5%)"), lwd = 1, lty = 1, col = c("#00abff", "red", "#ffc107"), pt.cex = 0.1, cex = 0.6)
+lower = CredibleInterval[1,]
+upper = CredibleInterval[2,]
+lines(timeVar, lower, col = "#ffc107")
+lines(timeVar, upper, col = "#00abff")
+
+polygon(
+  x = c(timeVar, rev(timeVar)),
+  y = c(lower,    rev(upper)),
+  col = rgb(0.8, 0.4, 0.4, 0.3),   # R,G,B in [0,1]; alpha=0.3 = 30% opacity
+  border = NA                      # no border around the polygon
+)
+```
+
+## 4c)
+
+We also checked the highest observed time to be sure and indeed the formula given below from the assignment gives an even higher function value so $0.5508196$ does indeed seem to be the time with the highest expected temperature. Here we did it using the $\hat{\beta}$ from the mean of the posterior but the median was also tested and gave the same result. 
+
+$$
+x_{max} = - \dfrac{\beta_1}{2\beta_2}
+$$
+
+```{r}
+meanBetaHat = sapply(1:3, function(j) mean(PosteriorDraws[,j]))
+meanPreds = meanBetaHat %*% xtime
+
+timeObs = timeVar[which.max(meanPreds)]
+ObsExpectedTemp = c(meanBetaHat %*% c(1, 0.5519126, 0.5519126^2))
+
+timeFormula = -(meanBetaHat[2] / (2*meanBetaHat[3]))
+FormulaExpectedTemp = c(meanBetaHat %*% c(1, 0.5508196, 0.5508196^2))
+
+data.frame(timeObs, timeFormula, ObsExpectedTemp, FormulaExpectedTemp)
+
+cat("The time with the highest expected temperature was: ", timeFormula, " Or day: ", timeFormula * 366)
+```
+
