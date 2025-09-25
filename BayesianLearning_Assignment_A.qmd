@@ -10,22 +10,17 @@ date: "2025-09-17"
 
 ## 1a)
 
-Due to the conjugate prior our posterior will also be beta distributed and we know
-the values for its parameters and expressions for mean and variance.
-$$
+Due to the conjugate prior our posterior will also be beta distributed and we know the values for its parameters and expressions for mean and variance. $$
 \alpha_{posterior} = \alpha_0 + s = 2 + 14 = 16
-$$
-$$
+$$ $$
 \beta_{posterior} = \beta_0 + f = 2 + 6 = 8
 $$
 
 $$
 E(\theta|y) = \dfrac{\alpha_{posterior}}{\alpha_{posterior} + \beta_{posterior}} = \dfrac{16}{16+8} = \dfrac{16}{24} = \dfrac{2}{3}
-$$
-$$
+$$ $$
 \sqrt{V(\theta|y)} = \sqrt{\dfrac{\alpha_{posterior}\beta_{posterior}}{(\alpha_{posterior} + \beta_{posterior} + 1)(\alpha_{posterior} + \beta_{posterior})^2}} = \sqrt{\dfrac{16\times8}{(25)(24)^2}} = \sqrt{\dfrac{128}{14400}} \approx 0.0942809
-$$
-Here we can see the LLN at work as the sample quantities based on the sample mean, converge to their population counterparts.
+$$ Here we can see the LLN at work as the sample quantities based on the sample mean, converge to their population counterparts.
 
 ```{r}
 
@@ -42,7 +37,6 @@ legend("topright", legend = "True value(0.0942809)", col = "red", lty = 1, lwd =
 
 
 ```
-
 
 ## 1b)
 
@@ -81,7 +75,7 @@ hist(x, 30, freq = FALSE, xlab = "daily returns (standardized)", ylab = "density
 
 ```
 
-V = 7 seems visually to be the MLE of V. 
+V = 7 seems visually to be the MLE of V.
 
 ```{r}
 binwidth = 0.1
@@ -93,8 +87,7 @@ points(vLogLik, cex = 0.1)
 
 ## 2b)
 
-We can see that both graphically and numerically, v = 10 has a higher likelihood than v = 1.
-This makes sense as our MLE of 7 is closer to 10 and more of the density is around 10 than 1. 
+We can see that both graphically and numerically, v = 10 has a higher likelihood than v = 1. This makes sense as our MLE of 7 is closer to 10 and more of the density is around 10 than 1.
 
 ```{r}
 vLik = sapply(vGrid, function(v) prod((dt(x, v))))
@@ -109,7 +102,6 @@ cat("L(1) and L(10) are:",vLik[c(1,10)],"MLE: 7")
 
 
 ```
-
 
 ## 2c)
 
@@ -148,10 +140,10 @@ legend("topright", legend = c("Prior","Likelihood(Normalized)","Posterior"), lty
 
 Here is our estimate of the posterior mean through numerical integration, basically using a sum to approximate the integral of $\int{P(V│X) \times V}$.
 
-
 ```{r}
 sum(vPosteriorNorm * vGrid * binwidth) # Basically approximate the integral x*f(x) with a sum. Apparently we can do some 
 ```
+
 # Problem 3
 
 You are the manager of a small fruit shop that sells a particular exclusive mango fruit. You buy each mango for \$10 and sell them for \$20. One reason for the large mark-up is that some of the mango may go unsold, and must then be used for mango smoothies which only brings in \$3 per mango, i.e. a loss of \$7 on each mango that goes unsold. Each week you must decide on how many mangoes to bring into the shop, and the demand is uncertain.
@@ -162,8 +154,7 @@ As this is a conjugate prior it can be shown that the posterior is also gamma di
 
 $$
 p(\lambda|x) \sim gamma(\alpha = \alpha_{prior}+\sum{x_i}, \beta = n + \beta_{prior})
-$$
-With a mean and variance formulas such as:
+$$ With a mean and variance formulas such as:
 
 $$
 E(\lambda|x) = \dfrac{\alpha}{\beta}
@@ -171,12 +162,11 @@ $$
 
 $$
 V(\lambda|x) = \dfrac{\alpha}{\beta^2}
-$$
-$$
+$$ $$
 \alpha_{prior} = 7, \beta_{prior} = 2
 $$
 
-Here below we get an estimated probability of $\theta >8$ by the proportion of values above 8 drawn from the posterior. Sadly as the true probability is about one in 30k, we don't get even one value above 8 from 10k draws so our proportion is 0. 
+Here below we get an estimated probability of $\theta >8$ by the proportion of values above 8 drawn from the posterior. Sadly as the true probability is about one in 30k, we don't get even one value above 8 from 10k draws so our proportion is 0.
 
 ```{r}
 set.seed(123)
@@ -205,6 +195,7 @@ ProbDistrEst = mean(PredDistrDraws >= 8)
 ProbDistrTrue = pnbinom(7, size = alpha_posterior, prob = beta_posterior / (beta_posterior +1), lower.tail =  FALSE)
 data.frame(ProbTrue = ProbDistrTrue, ProbEst = ProbDistrEst, row.names = "Probabilities(Predictive distribution):")
 ```
+
 ## 3c)
 
 Maximizing Mango utility
@@ -279,7 +270,7 @@ matlines(tGrid, t(predVec), col = rgb(0,0,0,0.1))
 
 ```
 
-These values for the prior and hyperprior's(hierarchical prior) hyperparameters seems a lot better with more regression lines following/fitting the data better and with less spread in distance and shape. 
+These values for the prior and hyperprior's(hierarchical prior) hyperparameters seems a lot better with more regression lines following/fitting the data better and with less spread in distance and shape.
 
 ```{r}
 
@@ -324,10 +315,6 @@ v_n = v_0 + n
 y = as.matrix(tempVar)
 betaHat = solve(xtime %*% t(xtime)) %*% xtime %*% y
 mu_n = solve(omega_n) %*% (xtx %*% betaHat + omega0 %*% mu0)
-s2 = t(y - t(xtime) %*% betaHat) %*% (y - t(xtime) %*% betaHat) / n-p
-
-v_nSigma2n =  v_0*sigma2_0 + (n-p)*s2 + t(mu_n - betaHat) %*% xtx %*% (mu_n - betaHat) + t(mu_n - mu0) %*% (omega0 %*% (mu_n - mu0))
-Sigma2n = v_nSigma2n / v_n
 
 myDraws = list()
 
@@ -336,10 +323,15 @@ omega_n_inv = solve(omega_n)
 myDrawsMat = matrix(NA, nrow = nDraws, ncol = 4)
 
 for(i in 1:nDraws){
-sigma2 = rScaledInvChi2(n = 1, v_0 = v_n, sigma2_0 = Sigma2n)
-sigma2 = as.numeric(sigma2)
-beta = rmvnorm(1, mean = mu_n ,sigma = sigma2 * omega_n_inv)  
-myDrawsMat[i,] =  c(beta, sigma2)
+  s2 = t(y - t(xtime) %*% betaHat) %*% (y - t(xtime) %*% betaHat) / (n-p)
+  v_nSigma2n =  v_0*sigma2_0 + (n-p)*s2 + t(mu_n - betaHat) %*% xtx %*% (mu_n -   betaHat) + t(mu_n - mu0) %*% (omega0 %*% (mu_n - mu0))
+  Sigma2n = v_nSigma2n / v_n
+    
+  sigma2 = rScaledInvChi2(n = 1, v_0 = v_n, sigma2_0 = Sigma2n)
+  sigma2 = as.numeric(sigma2)
+  beta = rmvnorm(1, mean = mu_n ,sigma = sigma2 * omega_n_inv) 
+  betaHat = t(beta)
+  myDrawsMat[i,] =  c(beta, sigma2)
 }
 myDraws = as.data.frame(myDrawsMat)
 colnames(myDraws) = c("B0", "B1", "B2", "Sigma2")
@@ -358,7 +350,7 @@ medianBetaHat = sapply(1:3, function(j) median(PosteriorDraws[,j]))
 medianPreds = medianBetaHat %*% xtime
 ```
 
-The interval bands do indeed not cover most of the points but this is due to them displaying the interval for the $\hat{\beta}$, having a 95% probability of containing the true $\hat{\beta}$, not a 95% probability of containing the data. 
+The interval bands do indeed not cover most of the points but this is due to them displaying the interval for the $\hat{\beta}$, having a 95% probability of containing the true $\hat{\beta}$, not a 95% probability of containing the data.
 
 ```{r}
 CredibleInterval = sapply(1:3, function(i) quantile(PosteriorDraws[,i], probs = c(0.025, 0.975))) %*% xtime # 2 x 366 result, each row is beta_2,5% * x or beta_97,5% * x
@@ -380,7 +372,7 @@ polygon(
 
 ## 4c)
 
-We also checked the highest observed time to be sure and indeed the formula given below from the assignment gives an even higher function value so $0.5508196$ does indeed seem to be the time with the highest expected temperature. Here we did it using the $\hat{\beta}$ from the mean of the posterior but the median was also tested and gave the same result. 
+We also checked the highest observed time to be sure and indeed the formula given below from the assignment gives an even higher function value so $0.5507938$ does indeed seem to be the time with the highest expected temperature. Here we did it using the $\hat{\beta}$ from the mean of the posterior but the median was also tested and gave the same result.
 
 $$
 x_{max} = - \dfrac{\beta_1}{2\beta_2}
@@ -400,4 +392,3 @@ data.frame(timeObs, timeFormula, ObsExpectedTemp, FormulaExpectedTemp)
 
 cat("The time with the highest expected temperature was: ", timeFormula, " Or day: ", timeFormula * 366)
 ```
-
